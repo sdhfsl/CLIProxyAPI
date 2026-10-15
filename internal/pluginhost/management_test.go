@@ -413,3 +413,66 @@ type managementHandlerFunc func(context.Context, pluginapi.ManagementRequest) (p
 func (f managementHandlerFunc) HandleManagement(ctx context.Context, req pluginapi.ManagementRequest) (pluginapi.ManagementResponse, error) {
 	return f(ctx, req)
 }
+
+func TestServeManagementHTTPExposesRemoteAddrAndHost(t *testing.T) {
+	var capturedReq pluginapi.ManagementRequest
+	host := newHostWithRecords(capabilityRecord{
+		id: "remoteaddr-test",
+		plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{
+			ManagementAPI: &managementPluginDouble{routes: []pluginapi.ManagementRoute{{
+				Method: http.MethodGet,
+				Path:   "/plugins/remoteaddr-test/info",
+				Handler: managementHandlerFunc(func(_ context.Context, req pluginapi.ManagementRequest) (pluginapi.ManagementResponse, error) {
+					capturedReq = req
+					return pluginapi.ManagementResponse{Body: []byte("ok")}, nil
+				}),
+			}}},
+		}},
+	})
+	host.RegisterManagementRoutes(context.Background(), nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/v0/management/plugins/remoteaddr-test/info", nil)
+	req.RemoteAddr = "192.0.2.1:54321"
+	req.Host = "management.local:8317"
+	rec := httptest.NewRecorder()
+	if !host.ServeManagementHTTP(rec, req) {
+		t.Fatal("ServeManagementHTTP() = false, want true")
+	}
+	if capturedReq.RemoteAddr != "192.0.2.1:54321" {
+		t.Fatalf("captured RemoteAddr = %q, want %q", capturedReq.RemoteAddr, "192.0.2.1:54321")
+	}
+	if capturedReq.Host != "management.local:8317" {
+		t.Fatalf("captured Host = %q, want %q", capturedReq.Host, "management.local:8317")
+	}
+}
+
+func TestServeResourceHTTPExposesRemoteAddrAndHost(t *testing.T) {
+	var capturedReq pluginapi.ManagementRequest
+	host := newHostWithRecords(capabilityRecord{
+		id: "resource-addr-test",
+		plugin: pluginapi.Plugin{Capabilities: pluginapi.Capabilities{
+			ManagementAPI: &managementPluginDouble{resources: []pluginapi.ResourceRoute{{
+				Path: "/status",
+				Handler: managementHandlerFunc(func(_ context.Context, req pluginapi.ManagementRequest) (pluginapi.ManagementResponse, error) {
+					capturedReq = req
+					return pluginapi.ManagementResponse{Body: []byte("ok")}, nil
+				}),
+			}}},
+		}},
+	})
+	host.RegisterManagementRoutes(context.Background(), nil)
+
+	req := httptest.NewRequest(http.MethodGet, "/v0/resource/plugins/resource-addr-test/status", nil)
+	req.RemoteAddr = "127.0.0.1:43210"
+	req.Host = "localhost:8317"
+	rec := httptest.NewRecorder()
+	if !host.ServeResourceHTTP(rec, req) {
+		t.Fatal("ServeResourceHTTP() = false, want true")
+	}
+	if capturedReq.RemoteAddr != "127.0.0.1:43210" {
+		t.Fatalf("captured RemoteAddr = %q, want %q", capturedReq.RemoteAddr, "127.0.0.1:43210")
+	}
+	if capturedReq.Host != "localhost:8317" {
+		t.Fatalf("captured Host = %q, want %q", capturedReq.Host, "localhost:8317")
+	}
+}

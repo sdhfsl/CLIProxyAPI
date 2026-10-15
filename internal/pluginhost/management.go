@@ -262,11 +262,13 @@ func (h *Host) ServeManagementHTTP(w http.ResponseWriter, r *http.Request) bool 
 	r.Body = io.NopCloser(bytes.NewReader(body))
 
 	resp, errHandle := h.callManagementHandler(r.Context(), record, pluginapi.ManagementRequest{
-		Method:  r.Method,
-		Path:    r.URL.Path,
-		Headers: cloneHeader(r.Header),
-		Query:   cloneValues(r.URL.Query()),
-		Body:    bytes.Clone(body),
+		Method:     r.Method,
+		Path:       r.URL.Path,
+		Host:       r.Host,
+		RemoteAddr: r.RemoteAddr,
+		Headers:    cloneHeader(r.Header),
+		Query:      cloneValues(r.URL.Query()),
+		Body:       bytes.Clone(body),
 	})
 	if errHandle != nil {
 		log.Warnf("pluginhost: management handler %s failed: %v", record.pluginID, errHandle)
@@ -310,10 +312,12 @@ func (h *Host) ServeResourceHTTP(w http.ResponseWriter, r *http.Request) bool {
 	}
 
 	resp, errHandle := h.callResourceHandler(r.Context(), record, pluginapi.ManagementRequest{
-		Method:  http.MethodGet,
-		Path:    r.URL.Path,
-		Headers: cloneHeader(r.Header),
-		Query:   cloneValues(r.URL.Query()),
+		Method:     http.MethodGet,
+		Path:       r.URL.Path,
+		Host:       r.Host,
+		RemoteAddr: r.RemoteAddr,
+		Headers:    cloneHeader(r.Header),
+		Query:      cloneValues(r.URL.Query()),
 	})
 	if errHandle != nil {
 		log.Warnf("pluginhost: resource handler %s failed: %v", record.pluginID, errHandle)

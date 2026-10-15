@@ -662,9 +662,11 @@ func TestRPCManagementIncludesHostCallbackID(t *testing.T) {
 	}
 
 	if _, errHandle := adapter.HandleManagement(context.Background(), pluginapi.ManagementRequest{
-		Method: http.MethodGet,
-		Path:   "/v0/management/plugins/test/status",
-		Body:   []byte("request"),
+		Method:     http.MethodGet,
+		Path:       "/v0/management/plugins/test/status",
+		Host:       "example.com",
+		RemoteAddr: "192.0.2.1:12345",
+		Body:       []byte("request"),
 	}); errHandle != nil {
 		t.Fatalf("HandleManagement() error = %v", errHandle)
 	}
@@ -677,6 +679,9 @@ func TestRPCManagementIncludesHostCallbackID(t *testing.T) {
 	}
 	if req.Method != http.MethodGet || req.Path != "/v0/management/plugins/test/status" || string(req.Body) != "request" {
 		t.Fatalf("management request = %#v, want forwarded request fields", req.ManagementRequest)
+	}
+	if req.Host != "example.com" || req.RemoteAddr != "192.0.2.1:12345" {
+		t.Fatalf("management request host/remoteaddr = %#v, want forwarded host and remoteaddr", req.ManagementRequest)
 	}
 
 	host.callbackContexts.mu.RLock()

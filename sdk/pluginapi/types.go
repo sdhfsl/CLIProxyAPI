@@ -1464,6 +1464,10 @@ type ManagementRequest struct {
 	Method string
 	// Path is the request path.
 	Path string
+	// Host is the host on which the URL is sought, as parsed from the inbound request.
+	Host string
+	// RemoteAddr allows HTTP servers and other software to record the network address that sent the request.
+	RemoteAddr string
 	// Headers contains request headers.
 	Headers http.Header
 	// Query contains request query parameters.
